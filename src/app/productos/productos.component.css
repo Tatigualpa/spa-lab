@@ -1,0 +1,47 @@
+/* src/app/productos/productos.component.css */
+
+.productos {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo para el formulario con CSS Grid (para que se vea ordenado) */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+/* Estilos de botones de acción del formulario */
+.form-actions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end; /* Alinea los botones al final de su celda en el grid */
+}
+
+/* Alineación y ancho de la tabla */
+.full-width-table {
+  width: 100%;
+}
+
+.mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3f51b5; /* Color primario de Material */
+}
+
+.loading-message, .no-data-message {
+  padding: 15px;
+  text-align: center;
+  color: #757575;
+}
+
+/* Estilo para las celdas de acciones */
+.mat-cell:last-child {
+  text-align: center;
+}
