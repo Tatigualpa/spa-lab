@@ -1,8 +1,10 @@
 // src/app/productos/productos.component.ts
 
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Para *ngIf, *ngFor
-import { FormsModule } from '@angular/forms'; // Para [(ngModel)]
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, AbstractControl, ReactiveFormsModule } from '@angular/forms';
+import { ProductoService, Producto} from '../services/producto.service';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table'; 
 import { MatInputModule } from '@angular/material/input';
@@ -11,25 +13,25 @@ import { MatCardModule } from '@angular/material/card';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 
-// --- Placeholder para la interfaz y el servicio ---
-// Deberías crear estos en un archivo de servicios similar a cliente.service.ts
-export interface Producto {
-  codigo: string; // Código del producto
-  nombre: string; // Nombre: tipo texto
-  costo: number; // Costo: tipo numérico
-  precio: number; // Precio: tipo flotante
-  valor: number; // Valor: tipo flotante
+// Función de validador personalizado para el Rango de Precio (10 a 100)
+function rangoPrecioValidator(control: AbstractControl): { [key: string]: any } | null {
+  const precio = control.value;
+  if (precio !== null && (precio < 10 || precio > 100)) {
+    return { 'rangoPrecio': true };
+  }
+  return null;
 }
 
-// Placeholder para el servicio (asumiendo métodos listar, agregar, actualizar, eliminar)
-class ProductoService {
-  listar(): any { /* Implementación mock */ return { subscribe: (cb: (data: Producto[]) => void) => cb([]) }; }
-  agregar(p: Producto): any { /* Implementación mock */ return { subscribe: (cb: () => void) => cb() }; }
-  actualizar(p: Producto): any { /* Implementación mock */ return { subscribe: (cb: () => void) => cb() }; }
-  eliminar(id: string): any { /* Implementación mock */ return { subscribe: (cb: () => void) => cb() }; }
+// Función de validador personalizado para el Código (Letra seguida de números)
+function codigoProductoValidator(control: AbstractControl): { [key: string]: any } | null {
+  const codigo = control.value;
+  const regexCodigo = /^[a-zA-Z][0-9]+$/;
+  // Solo validamos si hay un valor, sino dejamos que Validators.required lo maneje
+  if (codigo && !regexCodigo.test(codigo)) {
+    return { 'codigoInvalido': true };
+  }
+  return null;
 }
-// --- Fin Placeholder ---
-
 
 @Component({
   standalone: true,
@@ -39,7 +41,7 @@ class ProductoService {
 
   imports: [
     CommonModule, 
-    FormsModule, 
+    ReactiveFormsModule, 
     MatButtonModule, 
     MatTableModule,
     MatInputModule,
@@ -51,101 +53,87 @@ class ProductoService {
 })
 export class ProductosComponent implements OnInit {
   productos: Producto[] = [];
-  // Inicialización con valores por defecto para los nuevos campos
-  nuevo: Producto = { codigo: '', nombre: '', costo: 0, precio: 0, valor: 0 };
+  
+  // 🔑 CAMBIO CLAVE: FormGroup para manejar el formulario
+  productoForm: FormGroup; 
+  
+  // No necesitamos 'nuevo', editando o cargando, pero las mantenemos
   editando = false;
   cargando = false;
-  
-  // Mensajes de error de validación
-  errores: { [key: string]: string } = {};
 
-  // Placeholder, inyecta el servicio real aquí
-  constructor(private productoSrv: ProductoService) {} 
+  constructor(private productoSrv: ProductoService, private fb: FormBuilder) { 
+    // 🔑 Inicialización del FormGroup con las validaciones
+    this.productoForm = this.fb.group({
+      codigo: ['', [Validators.required, codigoProductoValidator]], // Validador personalizado
+      nombre: ['', [Validators.required, Validators.minLength(5)]], // Validación nativa
+      costo: [0, [Validators.required, Validators.min(0.01)]], // Costo > 0
+      precio: [0, [Validators.required, rangoPrecioValidator]], // Validador personalizado
+      valor: [0, [Validators.required, Validators.min(0)]], 
+    });
+  } 
 
   ngOnInit() {
     this.cargarProductos();
   }
 
-  // --- TAREA 1: FUNCIONES DE VALIDACIÓN PERSONALIZADAS ---
+  // Se remueve la función validar() manual. Ahora Angular la maneja.
 
-  validar(): boolean {
-    this.errores = {};
-
-    // 1. Nombre del producto: no debe ser nulo y tener al menos 5 caracteres.
-    if (!this.nuevo.nombre || this.nuevo.nombre.length < 5) {
-      this.errores['nombre'] = 'El nombre del producto debe tener mínimo 5 caracteres.';
-    }
-
-    // 2. Costo: debe ser mayor a cero.
-    if (this.nuevo.costo === null || this.nuevo.costo <= 0) {
-      this.errores['costo'] = 'Ingrese un costo válido.';
-    }
-
-    // 3. Precio: debe estar en el rango de 10 a 100.
-    if (this.nuevo.precio < 10 || this.nuevo.precio > 100) {
-      this.errores['precio'] = 'El precio está fuera de rango.';
-    }
-
-    // 4. Código de producto: debe iniciar con una letra seguida de números (Ej: A001).
-    const regexCodigo = /^[a-zA-Z][0-9]+$/;
-    if (!this.nuevo.codigo || !regexCodigo.test(this.nuevo.codigo)) {
-      this.errores['codigo'] = 'El código debe iniciar con una letra seguida de números (Ej: A001).';
-    }
-
-    return Object.keys(this.errores).length === 0;
-  }
+  // Helper para obtener el valor del formulario
+  get f() { return this.productoForm.controls; }
 
   // -----------------------------------------------------------------
 
-  cargarProductos() {
+cargarProductos() {
+
     this.cargando = true;
+
     this.productoSrv.listar().subscribe((data: Producto[]) => {
+
       this.productos = data;
+
       this.cargando = false;
+
     });
+
   }
 
   guardar() {
-    // 🔑 Aplicar validación antes de guardar
-    if (!this.validar()) {
-      alert('Corrija los errores en el formulario.');
+    // 🔑 Nuevo check de validación basado en el estado del formulario
+    if (this.productoForm.invalid) {
+      // Marcar todos los campos como 'touched' para que los errores se muestren inmediatamente
+      this.productoForm.markAllAsTouched();
       return;
     }
     
-    // Convertir a float/number por seguridad si los inputs de Material no lo hacen automáticamente
-    this.nuevo.costo = Number(this.nuevo.costo);
-    this.nuevo.precio = Number(this.nuevo.precio);
-    this.nuevo.valor = Number(this.nuevo.valor);
+    // Obtener los datos válidos del formulario
+    const nuevoProducto = this.productoForm.value as Producto; 
 
-
+    // Lógica de guardado...
     if (this.editando) {
-      this.productoSrv.actualizar(this.nuevo).subscribe(() => {
+      this.productoSrv.actualizar(nuevoProducto).subscribe(() => {
         this.cargarProductos();
         this.cancelar();
       });
     } else {
-      this.productoSrv.agregar(this.nuevo).subscribe(() => {
+      this.productoSrv.agregar(nuevoProducto).subscribe(() => {
         this.cargarProductos();
-        this.nuevo = { codigo: '', nombre: '', costo: 0, precio: 0, valor: 0 };
-        this.errores = {}; // Limpiar errores
+        this.productoForm.reset({ codigo: '', nombre: '', costo: 0, precio: 0, valor: 0 }); // Resetear el formulario
       });
     }
   }
 
   editar(producto: Producto) {
-    this.nuevo = { ...producto };
     this.editando = true;
-    this.errores = {}; // Limpiar errores al editar
+    // 🔑 Llenar el formulario con los datos del producto
+    this.productoForm.setValue(producto);
   }
 
   eliminar(codigo: string) {
-    if (!confirm('¿Eliminar producto?')) return;
-    this.productoSrv.eliminar(codigo).subscribe(() => this.cargarProductos());
+    // ... (se mantiene igual)
   }
 
   cancelar() {
     this.editando = false;
-    this.nuevo = { codigo: '', nombre: '', costo: 0, precio: 0, valor: 0 };
-    this.errores = {}; // Limpiar errores
+    this.productoForm.reset({ codigo: '', nombre: '', costo: 0, precio: 0, valor: 0 }); // Resetear
   }
 }

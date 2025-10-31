@@ -1,52 +1,66 @@
 <mat-card class="productos">
   <mat-card-header>
     <mat-card-title>
-      <h2><mat-icon>inventory_2</mat-icon> Gestión de Productos</h2>
+      <h2>Gestión de Productos</h2>
     </mat-card-title>
   </mat-card-header>
 
   <mat-card-content>
-    <form (ngSubmit)="guardar()" class="form-grid">
-      
-      <mat-form-field appearance="outline">
-        <mat-label>Código</mat-label>
-        <input matInput [(ngModel)]="nuevo.codigo" name="codigo" required>
-        <mat-error *ngIf="errores['codigo']">{{ errores['codigo'] }}</mat-error>
-      </mat-form-field>
+    <form [formGroup]="productoForm" (ngSubmit)="guardar()" class="form-grid">
+    
+    <mat-form-field appearance="outline">
+      <mat-label>Código</mat-label>
+      <input matInput formControlName="codigo" required> 
+      <mat-error *ngIf="f['codigo'].invalid && f['codigo'].touched">
+        <span *ngIf="f['codigo'].errors?.['required']">El código es obligatorio.</span>
+        <span *ngIf="f['codigo'].errors?.['codigoInvalido']">El código debe iniciar con una letra seguida de números (Ej: A001).</span>
+      </mat-error>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Nombre</mat-label>
-        <input matInput [(ngModel)]="nuevo.nombre" name="nombre" required>
-        <mat-error *ngIf="errores['nombre']">{{ errores['nombre'] }}</mat-error>
-      </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" required>
+      <mat-error *ngIf="f['nombre'].invalid && f['nombre'].touched">
+        <span *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</span>
+        <span *ngIf="f['nombre'].errors?.['minlength']">El nombre del producto debe tener mínimo 5 caracteres.</span>
+      </mat-error>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Costo</mat-label>
-        <input matInput type="number" [(ngModel)]="nuevo.costo" name="costo" required>
-        <mat-error *ngIf="errores['costo']">{{ errores['costo'] }}</mat-error>
-      </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Costo</mat-label>
+      <input matInput type="number" formControlName="costo" required>
+      <mat-error *ngIf="f['costo'].invalid && f['costo'].touched">
+        <span *ngIf="f['costo'].errors?.['required']">El costo es obligatorio.</span>
+        <span *ngIf="f['costo'].errors?.['min']">Ingrese un costo válido (mayor a cero).</span>
+      </mat-error>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Precio</mat-label>
-        <input matInput type="number" step="0.01" [(ngModel)]="nuevo.precio" name="precio" required>
-        <mat-error *ngIf="errores['precio']">{{ errores['precio'] }}</mat-error>
-      </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Precio</mat-label>
+      <input matInput type="number" step="0.01" formControlName="precio" required>
+      <mat-error *ngIf="f['precio'].invalid && f['precio'].touched">
+        <span *ngIf="f['precio'].errors?.['required']">El precio es obligatorio.</span>
+        <span *ngIf="f['precio'].errors?.['rangoPrecio']">El precio está fuera de rango (10 a 100).</span>
+      </mat-error>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Valor</mat-label>
-        <input matInput type="number" step="0.01" [(ngModel)]="nuevo.valor" name="valor" required>
-      </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Valor</mat-label>
+      <input matInput type="number" step="0.01" formControlName="valor" required>
+      <mat-error *ngIf="f['valor'].invalid && f['valor'].touched">
+        <span *ngIf="f['valor'].errors?.['required']">El valor es obligatorio.</span>
+      </mat-error>
+    </mat-form-field>
 
-      <div class="form-actions">
-        <button mat-raised-button color="primary" type="submit">
-          <mat-icon>{{ editando ? 'save' : 'add' }}</mat-icon>
-          {{ editando ? 'Actualizar' : 'Agregar' }}
-        </button>
-        <button mat-stroked-button color="warn" type="button" (click)="cancelar()" *ngIf="editando">
-          Cancelar
-        </button>
-      </div>
-    </form>
+    <div class="form-actions">
+      <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
+        {{ editando ? 'Actualizar' : 'Agregar' }}
+      </button>
+      <button mat-stroked-button color="warn" type="button" (click)="cancelar()" *ngIf="editando">
+        Cancelar
+      </button>
+    </div>
+  </form>
 
     <div *ngIf="cargando" class="loading-message">Cargando productos...</div>
 
@@ -80,12 +94,8 @@
       <ng-container matColumnDef="acciones">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
         <td mat-cell *matCellDef="let p">
-          <button mat-icon-button color="accent" (click)="editar(p)" title="Editar">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="eliminar(p.codigo)" title="Eliminar">
-            <mat-icon>delete</mat-icon>
-          </button>
+          <button mat-button color="accent" (click)="editar(p)">Editar</button>
+          <button mat-button color="warn" (click)="eliminar(p.codigo)">Eliminar</button>
         </td>
       </ng-container>
 
